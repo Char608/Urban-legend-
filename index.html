@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>URBAN LEGENDS BR</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0a0a0a;font-family:'Courier New',monospace;overflow:hidden;user-select:none;}
+#gameCanvas{display:block;cursor:none;position:fixed;top:0;left:0;}
+.screen{position:fixed;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;}
+#title-screen{background:#0a0a0a;}
+#game-screen{display:none;position:fixed;top:0;left:0;width:100%;height:100%;}
+#title-screen h1{font-size:clamp(28px,5vw,60px);color:#fff;letter-spacing:6px;margin-bottom:4px;white-space:nowrap;}
+#title-screen h1 span{color:#ffcc00;}
+.tagline{color:#555;font-size:11px;letter-spacing:4px;margin-bottom:28px;}
+.menu-btn{background:transparent;border:1px solid #333;color:#fff;font-family:'Courier New',monospace;font-size:12px;letter-spacing:3px;padding:10px 32px;cursor:pointer;margin:4px;transition:.15s;text-transform:uppercase;}
+.menu-btn:hover,.menu-btn:active{background:#ffcc00;color:#000;border-color:#ffcc00;}
+input.txt{background:transparent;border:none;border-bottom:1px solid #444;color:#fff;font-family:'Courier New',monospace;font-size:15px;letter-spacing:2px;padding:8px 4px;outline:none;text-align:center;width:200px;margin-bottom:22px;}
+input.txt::placeholder{color:#333;}
+.lbl{font-size:9px;color:#555;letter-spacing:2px;margin-bottom:8px;}
+#connecting-msg{font-size:10px;letter-spacing:2px;margin-top:8px;min-height:16px;color:#888;}
+#skin-row{display:flex;gap:10px;margin-bottom:22px;flex-wrap:wrap;justify-content:center;max-width:360px;}
+.mode-row{display:flex;gap:8px;margin-bottom:24px;}
+.mode-btn{background:transparent;border:1px solid #333;color:#666;font-family:'Courier New',monospace;font-size:10px;letter-spacing:2px;padding:8px 16px;cursor:pointer;transition:.15s;}
+.mode-btn.sel{border-color:#ffcc00;color:#ffcc00;background:rgba(255,204,0,0.08);}
+/* HUD */
+#hud{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;}
+#hp-wrap{position:absolute;bottom:20px;left:20px;}
+#sh-wrap{position:absolute;bottom:46px;left:20px;}
+.bar-lbl{font-size:8px;color:#666;letter-spacing:1px;margin-bottom:2px;}
+.bar-bg{width:160px;height:7px;background:#111;border-radius:4px;overflow:hidden;}
+#hp-fill{height:100%;background:#dd3333;border-radius:4px;transition:width .08s;}
+#sh-fill{height:100%;background:#3366dd;border-radius:4px;transition:width .08s;}
+#ammo-wrap{position:absolute;bottom:20px;right:20px;text-align:right;}
+#gun-lbl{font-size:8px;color:#555;letter-spacing:2px;margin-bottom:2px;}
+#ammo-nums{font-size:22px;font-weight:bold;color:#fff;}
+#ammo-cur{color:#fff;}#ammo-sep{color:#555;font-size:14px;}#ammo-max{color:#555;font-size:14px;}
+#reload-bar-wrap{position:absolute;bottom:56px;right:20px;display:none;width:120px;text-align:right;}
+#reload-lbl{font-size:8px;color:#ffcc44;letter-spacing:2px;margin-bottom:3px;}
+#reload-bar-bg{width:120px;height:4px;background:#222;border-radius:2px;}
+#reload-bar-fill{height:100%;background:#ffcc44;border-radius:2px;width:0%;}
+#inv-wrap{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:6px;}
+.inv-slot{width:46px;height:46px;border:1px solid #222;background:#111;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:8px;letter-spacing:1px;color:#333;flex-direction:column;gap:2px;}
+.inv-slot.filled{border-color:#555;color:#fff;}
+#hero-hud{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);display:none;background:rgba(0,0,0,.8);border:1px solid #444;padding:8px 16px;border-radius:4px;text-align:center;pointer-events:none;}
+#hero-name{font-size:11px;color:#ffcc00;letter-spacing:2px;margin-bottom:4px;}
+#hero-ability{font-size:9px;color:#aaa;letter-spacing:1px;}
+#score-top{position:absolute;top:12px;left:50%;transform:translateX(-50%);text-align:center;font-size:10px;color:#777;letter-spacing:2px;}
+#kill-num{font-size:24px;color:#ffcc00;font-weight:bold;}
+#kill-feed{position:absolute;top:12px;right:14px;text-align:right;max-width:260px;}
+.kf-entry{font-size:10px;background:rgba(0,0,0,.6);padding:3px 8px;border-radius:2px;margin-bottom:2px;animation:kfFade 3.5s forwards;}
+@keyframes kfFade{0%,70%{opacity:1}100%{opacity:0}}
+#zone-warn{position:absolute;top:42%;left:50%;transform:translateX(-50%);font-size:13px;letter-spacing:3px;color:#ff4444;opacity:0;transition:.3s;pointer-events:none;}
+#announcement{position:absolute;top:38%;left:50%;transform:translateX(-50%);font-size:13px;letter-spacing:3px;color:#ffcc00;opacity:0;transition:.5s;pointer-events:none;text-align:center;}
+#pickup-hint{position:absolute;top:58%;left:50%;transform:translateX(-50%);font-size:10px;color:#ccc;letter-spacing:2px;display:none;background:rgba(0,0,0,.7);padding:5px 14px;border-radius:3px;border:1px solid #333;}
+#mode-badge{position:absolute;top:12px;left:14px;font-size:9px;color:#555;letter-spacing:2px;}
+#voice-bar{position:absolute;top:30px;left:14px;display:flex;align-items:center;gap:6px;}
+#mic-btn{font-size:8px;letter-spacing:1px;padding:4px 8px;border:1px solid #222;color:#555;cursor:pointer;background:#0a0a0a;font-family:'Courier New',monospace;pointer-events:all;}
+#mic-btn.active{border-color:#44ff88;color:#44ff88;}
+#mic-btn.muted{border-color:#ff4444;color:#ff4444;}
+#voice-status{font-size:8px;color:#333;letter-spacing:1px;}
+#golden-flash{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(238,34,255,0.35);pointer-events:none;opacity:0;z-index:60;transition:opacity .3s;}
+#golden-flash.active{opacity:1;}
+#chat-wrap{position:fixed;bottom:78px;left:14px;width:270px;z-index:20;display:flex;flex-direction:column;}
+#chat-tabs{display:flex;gap:2px;margin-bottom:2px;}
+.ctab{font-size:8px;letter-spacing:1px;padding:3px 7px;border:1px solid #1a1a1a;color:#444;cursor:pointer;background:transparent;font-family:'Courier New',monospace;}
+.ctab.active{border-color:#333;color:#ccc;background:#0d0d0d;}
+.unread{width:5px;height:5px;background:#ffcc00;border-radius:50%;display:inline-block;margin-left:4px;}
+#dm-tabs{display:flex;gap:2px;}
+#chat-box{background:rgba(0,0,0,.72);border:1px solid #1a1a1a;padding:7px;height:110px;overflow-y:auto;font-size:9px;line-height:1.5;}
+#chat-box::-webkit-scrollbar{width:3px;}
+#chat-box::-webkit-scrollbar-thumb{background:#222;}
+.chat-msg{margin-bottom:2px;}
+.chat-name{color:#ffcc44;cursor:pointer;}
+.chat-msg.dm .chat-name{color:#44ccff;}
+#chat-input-row{display:flex;}
+#chat-in{flex:1;background:#0a0a0a;border:1px solid #1a1a1a;border-top:none;color:#ccc;font-family:'Courier New',monospace;font-size:9px;padding:4px 7px;outline:none;}
+#chat-send{background:#111;border:1px solid #1a1a1a;border-left:none;border-top:none;color:#444;font-family:'Courier New',monospace;font-size:8px;padding:4px 7px;cursor:pointer;}
+#chat-send:hover{color:#ccc;}
+#esc-menu{position:fixed;top:0;right:0;width:280px;height:100%;background:#0c0c0c;border-left:1px solid #1a1a1a;z-index:40;display:none;flex-direction:column;}
+#esc-hdr{padding:18px 18px 10px;border-bottom:1px solid #1a1a1a;display:flex;justify-content:space-between;align-items:center;}
+#esc-hdr h2{font-size:10px;letter-spacing:3px;color:#ccc;}
+#esc-close{background:transparent;border:none;color:#444;font-size:14px;cursor:pointer;}
+#esc-close:hover{color:#fff;}
+#esc-player-list{flex:1;overflow-y:auto;padding:8px 0;}
+.esc-player{display:flex;align-items:center;padding:7px 18px;gap:8px;border-bottom:1px solid #0f0f0f;}
+.esc-player:hover{background:#111;}
+.esc-pname{flex:1;font-size:10px;letter-spacing:1px;color:#aaa;}
+.esc-pname.you{color:#ffcc00;}
+.esc-btn{font-size:7px;letter-spacing:1px;padding:3px 6px;border:1px solid #222;color:#444;cursor:pointer;background:transparent;font-family:'Courier New',monospace;pointer-events:all;}
+.esc-btn:hover{color:#ccc;border-color:#444;}
+.esc-btn.muted{color:#ff4444;border-color:#ff4444;}
+#esc-btns{padding:14px 18px;border-top:1px solid #1a1a1a;display:flex;flex-direction:column;gap:6px;}
+#death-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.82);z-index:45;display:none;flex-direction:column;align-items:center;justify-content:center;}
+#death-screen h2{color:#cc2222;font-size:44px;letter-spacing:8px;margin-bottom:18px;}
+#death-msg{color:#aaa;font-size:12px;letter-spacing:3px;margin-bottom:8px;}
+#respawn-timer{color:#ffcc00;font-size:28px;font-weight:bold;min-height:40px;}
+#gameover-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.88);z-index:45;display:none;flex-direction:column;align-items:center;justify-content:center;}
+#gameover-screen h2{color:#ffcc00;font-size:32px;letter-spacing:6px;margin-bottom:8px;}
+#gameover-winner{color:#fff;font-size:13px;letter-spacing:3px;margin-bottom:24px;}
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<!-- TITLE SCREEN -->
+<div id="title-screen" class="screen">
+  <h1>URBAN <span>LEGENDS</span> BR</h1>
+  <div class="tagline">BATTLE ROYALE · FREE FOR ALL</div>
+  <div class="lbl">YOUR NAME</div>
+  <input class="txt" id="name-in" type="text" placeholder="ENTER NAME" maxlength="12" spellcheck="false" autocomplete="off">
+  <div class="lbl">SKIN COLOR</div>
+  <div id="skin-row"></div>
+  <div class="lbl" style="margin-top:20px">GAME MODE</div>
+  <div class="mode-row">
+    <button class="mode-btn sel" id="btn-ffa" onclick="selectMode('ffa')">FFA</button>
+    <button class="mode-btn" id="btn-br" onclick="selectMode('br')">BATTLE ROYALE</button>
+  </div>
+  <button class="menu-btn" onclick="joinGame()">PLAY</button>
+  <div id="connecting-msg"></div>
+  <div style="margin-top:20px;font-size:8px;color:#222;letter-spacing:2px;text-align:center;line-height:2">
+    WASD MOVE · LMB SHOOT · E PICKUP · H HEALTH · G SHIELD · R RELOAD<br>
+    Q WEBZIP · SPACE SWING/FLY · SHIFT SPRINT/DASH · T CHAT · ESC MENU
+  </div>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="game-screen">
+  <div id="hud">
+    <div id="mode-badge"></div>
+    <div id="voice-bar">
+      <button id="mic-btn" onclick="toggleMic()">MIC OFF</button>
+      <span id="voice-status"></span>
+    </div>
+    <div id="score-top">KILLS<br><span id="kill-num">0</span></div>
+    <div id="kill-feed"></div>
+    <div id="sh-wrap"><div class="bar-lbl">SHIELD</div><div class="bar-bg"><div id="sh-fill" style="width:0%"></div></div></div>
+    <div id="hp-wrap"><div class="bar-lbl">HEALTH</div><div class="bar-bg"><div id="hp-fill" style="width:100%"></div></div></div>
+    <div id="ammo-wrap">
+      <div id="gun-lbl">DEFAULT GUN</div>
+      <div id="ammo-nums"><span id="ammo-cur">30</span><span id="ammo-sep">/</span><span id="ammo-max">30</span></div>
+    </div>
+    <div id="reload-bar-wrap">
+      <div id="reload-lbl">RELOADING</div>
+      <div id="reload-bar-bg"><div id="reload-bar-fill"></div></div>
+    </div>
+    <div id="inv-wrap">
+      <div class="inv-slot" id="inv-hp">HP×0</div>
+      <div class="inv-slot" id="inv-sh">—</div>
+    </div>
+    <div id="hero-hud"><div id="hero-name"></div><div id="hero-ability"></div></div>
+    <div id="zone-warn">⚠  LEAVE THE ZONE</div>
+    <div id="announcement"></div>
+    <div id="pickup-hint"></div>
+  </div>
+  <div id="chat-wrap">
+    <div id="chat-tabs">
+      <button class="ctab active" id="tab-global" data-tab="global" onclick="switchTab('global')">GLOBAL</button>
+      <div id="dm-tabs"></div>
+    </div>
+    <div id="chat-box"></div>
+    <div id="chat-input-row">
+      <input id="chat-in" type="text" placeholder="T to chat · Enter to send" maxlength="200" autocomplete="off">
+      <button id="chat-send" onclick="sendChat()">SEND</button>
+    </div>
+  </div>
+  <div id="esc-menu">
+    <div id="esc-hdr"><h2>PLAYERS</h2><button id="esc-close" onclick="closeEscMenu()">✕</button></div>
+    <div id="esc-player-list"></div>
+    <div id="esc-btns">
+      <button class="menu-btn" onclick="toggleMic()" style="font-size:10px;padding:6px">TOGGLE MIC</button>
+      <button class="menu-btn" onclick="closeEscMenu()" style="font-size:10px;padding:6px">BACK TO GAME</button>
+      <button class="menu-btn" onclick="leaveGame()" style="font-size:10px;padding:6px;border-color:#441111;color:#884444">LEAVE GAME</button>
+    </div>
+  </div>
+  <div id="death-screen">
+    <h2>YOU DIED</h2>
+    <div id="death-msg"></div>
+    <div id="respawn-timer"></div>
+  </div>
+  <div id="gameover-screen">
+    <h2>GAME OVER</h2>
+    <div id="gameover-winner"></div>
+    <button class="menu-btn" onclick="leaveGame()">MAIN MENU</button>
+  </div>
+  <div id="golden-flash"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     INLINE BOOT SCRIPT
+     Runs immediately — no waiting for external files.
+     Handles: skin grid, mode select, joinGame trigger.
+     All other logic lives in the external JS files.
+═══════════════════════════════════════════════════════ -->
+<script>
+// Skin data duplicated inline so menu never depends on skins.js load timing
+var SKINS = [
+  { name:'Classic Red', color:'#cc3333', bullet:'#ff6666', hoodie:'#aa2222' },
+  { name:'Midnight',    color:'#222255', bullet:'#aaaaff', hoodie:'#111133' },
+  { name:'Ice',         color:'#ccddff', bullet:'#88ccff', hoodie:'#aabbee' },
+  { name:'Volt',        color:'#cccc00', bullet:'#ffff44', hoodie:'#aaaa00' },
+  { name:'Ocean',       color:'#1155bb', bullet:'#44aaff', hoodie:'#003388' },
+  { name:'Flame',       color:'#cc5500', bullet:'#ff8822', hoodie:'#993300' },
+  { name:'Phantom',     color:'#552288', bullet:'#cc66ff', hoodie:'#331155' },
+  { name:'Gold',        color:'#ccaa00', bullet:'#ffdd44', hoodie:'#aa8800' },
+];
+var selectedSkin = 0;
+var selectedMode = 'ffa';
+
+// Build skin dots immediately (this script runs after the HTML above it)
+(function() {
+  var row = document.getElementById('skin-row');
+  SKINS.forEach(function(s, i) {
+    var d = document.createElement('div');
+    d.style.width        = '38px';
+    d.style.height       = '38px';
+    d.style.borderRadius = '5px';
+    d.style.cursor       = 'pointer';
+    d.style.display      = 'inline-block';
+    d.style.background   = 'linear-gradient(160deg,' + s.color + ',' + s.hoodie + ')';
+    d.style.border       = i===0 ? '3px solid #ffffff' : '3px solid #444444';
+    d.style.margin       = '3px';
+    d.style.transition   = '0.15s';
+    d.title = s.name;
+    d.onclick = function() {
+      row.querySelectorAll('div').forEach(function(x) {
+        x.style.border    = '3px solid #444444';
+        x.style.transform = '';
+      });
+      d.style.border    = '3px solid #ffffff';
+      d.style.transform = 'scale(1.15)';
+      selectedSkin = i;
+    };
+    row.appendChild(d);
+  });
+})();
+
+function selectMode(m) {
+  selectedMode = m;
+  // Keep Game.selectedMode in sync if game.js has already loaded
+  if (typeof Game !== 'undefined') Game.selectedMode = m;
+  document.getElementById('btn-ffa').className = 'mode-btn' + (m==='ffa'?' sel':'');
+  document.getElementById('btn-br').className  = 'mode-btn' + (m==='br' ?' sel':'');
+}
+
+function joinGame() {
+  var msg = document.getElementById('connecting-msg');
+  if (typeof io === 'undefined') {
+    msg.style.color = '#ff4444';
+    msg.textContent = 'Cannot connect — is the server running?';
+    return;
+  }
+  // Hand off to game.js which defines _startGame()
+  if (typeof _startGame === 'function') {
+    _startGame(selectedSkin, selectedMode);
+  } else {
+    msg.style.color = '#ff4444';
+    msg.textContent = 'Game scripts still loading, try again...';
+  }
+}
+</script>
+
+<!-- External game scripts load AFTER inline boot -->
+<script src="/socket.io/socket.io.js"></script>
+<script src="js/skins.js"></script>
+<script src="js/input.js"></script>
+<script src="js/map.js"></script>
+<script src="js/renderer.js"></script>
+<script src="js/chat.js"></script>
+<script src="js/voice.js"></script>
+<script src="js/game.js"></script>
+
+</body>
+</html>
